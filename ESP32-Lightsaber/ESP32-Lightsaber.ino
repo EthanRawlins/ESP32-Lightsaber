@@ -34,7 +34,6 @@
 
 //------------------------------------------------------------------------------------------------------------------------
 // Defines
-// Testing branch pull request
 
 //    Button
           #define PUSH_BUTTON   32         // Momentary Push Button
