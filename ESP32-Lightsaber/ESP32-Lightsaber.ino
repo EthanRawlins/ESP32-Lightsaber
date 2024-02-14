@@ -49,7 +49,7 @@
           #define I2S_NUM       0           // i2s port number
 
 //    Wav File reading
-          #define NUM_BYTES_TO_READ_FROM_FILE 256    // How many bytes to read from wav file at a time
+          #define NUM_BYTES_TO_READ_FROM_FILE 1024    // How many bytes to read from wav file at a time
 
 //    MPU-6050 accelerometer
           const int MPU_ADDR = 0x68;        // i2c address of the MPU-6050
