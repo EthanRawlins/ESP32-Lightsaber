@@ -50,6 +50,9 @@
 //    Wav File reading
           #define NUM_BYTES_TO_READ_FROM_FILE 1024    // How many bytes to read from wav file at a time
 
+//    Sound Buffer
+          #define NUM_BYTES_TO_USE_AS_BUFFER 256      // How many bytes to use as the audio buffer for playing audio
+
 //    MPU-6050 accelerometer
           const int MPU_ADDR = 0x68;        // i2c address of the MPU-6050
           int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
@@ -90,7 +93,7 @@
           .data_in_num = I2S_PIN_NO_CHANGE                  // we are not interested in I2S data into the ESP32
       };
 
-      float Volume = 0.5;
+      float Volume = 1;
 
       bool VolUp = 0;
       bool VolDown = 0;
@@ -280,7 +283,6 @@ uint16_t ReadFile(byte* Samples)
     uint16_t BytesToRead;                               // Number of bytes to read from the file
     uint16_t i;                                         // loop counter
     int16_t SignedSample;                               // Single Signed Sample
-//    float Volume;                                       // Volume
 
     
     if(BytesReadSoFar+NUM_BYTES_TO_READ_FROM_FILE>WavHeader.DataSize)   // If next read will go past the end then adjust the 
@@ -297,34 +299,40 @@ uint16_t ReadFile(byte* Samples)
       BytesReadSoFar=0;                                 // Clear to no bytes read in so far                            
     }
 
-    if (digitalRead(PUSH_BUTTON) && (Volume < 1) && (VolUp == 0))
-    {
-      Volume += 0.1;
-      VolUp = 1;
-      Serial.print("Volume Up Button Pressed\n");
-    }
-
-    if ((digitalRead(PUSH_BUTTON) == 0) && (VolUp == 1))
-    {
-      VolUp = 0;
-    }
-
-    if (digitalRead(PUSH_BUTTON_2) && (Volume > 0) && (VolDown == 0))
-    {
-      Volume -= 0.1;
-      VolDown = 1;
-      Serial.print("Volume Down Button Pressed\n");
-    }
-
-    if ((digitalRead(PUSH_BUTTON_2) == 0) && (VolDown == 1))
-    {
-      VolDown = 0;
-    }
+//    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!This is for Button controls!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//
+//    if (digitalRead(PUSH_BUTTON) && (Volume < 1) && (VolUp == 0))
+//    {
+//      Volume += 0.1;
+//      VolUp = 1;
+//      Serial.print("Volume Up Button Pressed\n");
+//    }
+//
+//    if ((digitalRead(PUSH_BUTTON) == 0) && (VolUp == 1))
+//    {
+//      VolUp = 0;
+//    }
+//
+//    if (digitalRead(PUSH_BUTTON_2) && (Volume > 0) && (VolDown == 0))
+//    {
+//      Volume -= 0.1;
+//      VolDown = 1;
+//      Serial.print("Volume Down Button Pressed\n");
+//    }
+//
+//    if ((digitalRead(PUSH_BUTTON_2) == 0) && (VolDown == 1))
+//    {
+//      VolDown = 0;
+//    }
+//    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!This is for Button controls!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     for (i = 0; i < BytesToRead; i += 2)                // We step two bytes at a time as we're using 16 bits per channel
     {
       SignedSample =* ((int16_t *)(Samples + i));       // Get the Byte address, convert to an int pointer, then get contents of that address as an int
+      
+//    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! This next line is where we can edit the sound byte !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       SignedSample = SignedSample * Volume;             // Multiply by the volume - a value that will be between 0 and 1, where 1 would be full volume
+      
       *((int16_t *)(Samples + i)) = SignedSample;       // Store back in the memory location we got the sample from
 
       // The previous 3 lines of code could be written in this one line, would be marginally quicker but harder to follow
