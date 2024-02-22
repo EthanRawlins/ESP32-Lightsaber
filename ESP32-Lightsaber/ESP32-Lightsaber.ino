@@ -1,4 +1,4 @@
-//------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
 // 
 // Title: SD Card Wav Player
 //
@@ -18,53 +18,44 @@
 //
 //    http://www.xtronical.com/i2s-ep3
 //
-//------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
 
-
-//------------------------------------------------------------------------------------------------------------------------
-//
-// Includes
-
+//------------------------------------------------------------ Includes -----------------------------------------------------
     #include "SD.h"                         // SD Card library, usually part of the standard install
     #include "driver/i2s.h"                 // Library of I2S routines, comes with ESP32 standard install
     #include "Wire.h"                       // Library for wire inputs/outputs
-  
-//------------------------------------------------------------------------------------------------------------------------
+    #include <Adafruit_MPU6050.h>           // Library for MPU-6050 Accelerometer
+    #include <Adafruit_Sensor.h>            // Library for Sensors
 
-//------------------------------------------------------------------------------------------------------------------------
-// Defines
-
-//    Button
-          #define PUSH_BUTTON   32         // Momentary Push Button
-          #define PUSH_BUTTON_2 26         // Momentary Push Button 2
+//------------------------------------------------------------ Buttons ------------------------------------------------------
+    #define PUSH_BUTTON   32                // Momentary Push Button
+    #define PUSH_BUTTON_2 26          // Momentary Push Button 2
  
-//    SD Card
-          #define SD_CS         5          // SD Card chip select
+//------------------------------------------------------------ SD Card ------------------------------------------------------
+    #define SD_CS         5          // SD Card chip select
    
-//    I2S
+//------------------------------------------------------------ I2S ----------------------------------------------------------
           #define I2S_DOUT      33          // i2S Data out oin
           #define I2S_BCLK      27          // Bit clock
           #define I2S_LRC       25          // Left/Right clock, also known as Frame clock or word select
           #define I2S_NUM       0           // i2s port number
 
-//    Wav File reading
+//------------------------------------------------------------ Wav File reading ---------------------------------------------
           #define NUM_BYTES_TO_READ_FROM_FILE 1024    // How many bytes to read from wav file at a time
 
-//    Sound Buffer
+//------------------------------------------------------------ Sound Buffer -------------------------------------------------
           #define NUM_BYTES_TO_USE_AS_BUFFER 256      // How many bytes to use as the audio buffer for playing audio
 
-//    MPU-6050 accelerometer
-          const int MPU_ADDR = 0x68;        // i2c address of the MPU-6050
-          int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
+//------------------------------------------------------------ MPU-6050 accelerometer ---------------------------------------
+//          const int MPU_ADDR = 0x68;        // i2c address of the MPU-6050
+//          int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
+          Adafruit_MPU6050 mpu;
 
-//    Built-in LED
+
+//------------------------------------------------------------ Built-in LED -------------------------------------------------
           #define INTERNAL_LED  2
 
-//------------------------------------------------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------------------------------------------------
-// structures and also variables
-//  I2S configuration
+//------------------------------------------------------------ I2S configuration --------------------------------------------
 
       static const i2s_config_t i2s_config = 
       {
@@ -87,7 +78,7 @@
       
       static const i2s_pin_config_t pin_config = 
       {
-          .bck_io_num = I2S_BCLK,                           // The bit clock connectiom, goes to pin 27 of ESP32
+          .bck_io_num = I2S_BCLK,                           // The bit clock connection, goes to pin 27 of ESP32
           .ws_io_num = I2S_LRC,                             // Word select, also known as word select or left right clock
           .data_out_num = I2S_DOUT,                         // Data out from the ESP32, connect to DIN on 38357A
           .data_in_num = I2S_PIN_NO_CHANGE                  // we are not interested in I2S data into the ESP32
@@ -119,50 +110,46 @@
           char DataSectionID[4];      // The letters "data"
           uint32_t DataSize;          // Size of the data that follows
       }WavHeader;
-//------------------------------------------------------------------------------------------------------------------------
 
-//  Global Variables/objects    
-    
+//----------------------------------------------------------- Global Variables/objects --------------------------------------
     File WavFile;                                 // Object for root of SD card directory
     static const i2s_port_t i2s_num = I2S_NUM_0;  // i2s port number    
 
-//------------------------------------------------------------------------------------------------------------------------
-
-//  Multi-core Tasks    
-    
+//----------------------------------------------------------- Tasks ---------------------------------------------------------
     TaskHandle_t task1;               // task 1
     TaskHandle_t task2;               // task 2
 
-//------------------------------------------------------------------------------------------------------------------------
 
-
+//----------------------------------------------------------- Multi Core Task 1 ---------------------------------------------
 void task_1code(void * pvParameters)
 {
   for(;;) {
-    Serial.print("task1 running on core ");
-    Serial.print(xPortGetCoreID());
-    Serial.print("\n");
-//    digitalWrite(INTERNAL_LED, HIGH);
-//    delay(1000);
-//    digitalWrite(INTERNAL_LED, LOW);
-//    delay(1000);
+//    Serial.print("task1 running on core ");
+//    Serial.print(xPortGetCoreID());
+//    Serial.print("\n");
+////    digitalWrite(INTERNAL_LED, HIGH);
+////    delay(1000);
+////    digitalWrite(INTERNAL_LED, LOW);
+////    delay(1000);
 
     PlayWav();
   }
 }
+
+//----------------------------------------------------------- Multi Core Task 2 ---------------------------------------------
 void task_2code(void * pvParameters)
 {
   for(;;) {
-    Serial.print("task2 running on core ");
-    Serial.print(xPortGetCoreID());
-    Serial.print("\n");
-//    delay(300);
+//    Serial.print("task2 running on core ");
+//    Serial.print(xPortGetCoreID());
+//    Serial.print("\n");
+////    delay(300);
 
     GetGyro();
   }
 }
 
-
+//----------------------------------------------------------- Setup ---------------------------------------------------------
 void setup() {    
     Wire.begin();
     Serial.begin(115200);                               // Used for info/debug
@@ -190,11 +177,87 @@ void setup() {
                       
     pinMode(INTERNAL_LED, OUTPUT);                                // on board LED
 
-    Wire.begin(21, 22, 100000);                           // sda, scl, clock speed
-    Wire.beginTransmission(MPU_ADDR);
-    Wire.write(0x6B);                                    // PWR_MGMT_1 register
-    Wire.write(0);                                       // set to zero (wakes up the MPU-6050)
-    Wire.endTransmission(true);
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! MPU-6050 Accelerometer Manual attempt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//    Wire.begin(21, 22, 100000);                           // sda, scl, clock speed
+//    Wire.beginTransmission(MPU_ADDR);
+//    Wire.write(0x6B);                                    // PWR_MGMT_1 register
+//    Wire.write(0);                                       // set to zero (wakes up the MPU-6050)
+//    Wire.endTransmission(true);
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! MPU-6050 Accelerometer Manual attempt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+//------------------------------------------------------------------- MPU-6050 Accelerometer Setup --------------------------
+    if (!mpu.begin()) {
+      Serial.println("Failed to find MPU6050 chip");
+      while (1) {
+        delay(10);
+      }
+    }
+    Serial.println("MPU6050 Found!");
+
+    mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+    Serial.print("Accelerometer range set to: ");
+    switch (mpu.getAccelerometerRange()) {
+      case MPU6050_RANGE_2_G:
+        Serial.println("+-2G");
+        break;
+      case MPU6050_RANGE_4_G:
+        Serial.println("+-4G");
+        break;
+      case MPU6050_RANGE_8_G:
+        Serial.println("+-8G");
+        break;
+      case MPU6050_RANGE_16_G:
+        Serial.println("+-16G");
+        break;
+    }
+
+    mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+    Serial.print("Gyro range set to: ");
+    switch (mpu.getGyroRange()) {
+      case MPU6050_RANGE_250_DEG:
+        Serial.println("+- 250 deg/s");
+        break;
+      case MPU6050_RANGE_500_DEG:
+        Serial.println("+- 500 deg/s");
+        break;
+      case MPU6050_RANGE_1000_DEG:
+        Serial.println("+- 1000 deg/s");
+        break;
+      case MPU6050_RANGE_2000_DEG:
+        Serial.println("+- 2000 deg/s");
+        break;
+    }
+
+    mpu.setFilterBandwidth(MPU6050_BAND_5_HZ);
+    Serial.print("Filter Bandwidth set to: ");
+    switch (mpu.getFilterBandwidth()) {
+      case MPU6050_BAND_260_HZ:
+        Serial.println("260 Hz");
+        break;
+      case MPU6050_BAND_184_HZ:
+        Serial.println("184 Hz");
+        break;
+      case MPU6050_BAND_94_HZ:
+        Serial.println("94 Hz");
+        break;
+      case MPU6050_BAND_44_HZ:
+        Serial.println("44 Hz");
+        break;
+      case MPU6050_BAND_21_HZ:
+        Serial.println("21 Hz");
+        break;
+      case MPU6050_BAND_10_HZ:
+        Serial.println("10 Hz");
+        break;
+      case MPU6050_BAND_5_HZ:
+        Serial.println("5 Hz");
+        break;
+    }
+
+    Serial.println("");
+    delay(100);
+
+//---------------------------------------------------------------- Dual Core Tasks Setup ------------------------------------
 
     xTaskCreatePinnedToCore(task_1code, // Task function
                             "Task1",    // name of task
@@ -216,23 +279,18 @@ void setup() {
 }
 
 
+//---------------------------------------------------------------- Main Loop ------------------------------------------------
 void loop()
 {    
 //  Serial.print( " loop() is running on: Core " );
 //  Serial.println( xPortGetCoreID() );
 //  delay(1000);
 
-
-
 //task_1code();
 //task_2code();
 
-
-
 //   PlayWav();                                            // Have to keep calling this to keep the wav file playing
 //   GetGyro();
-
-
 
 //    Wire.beginTransmission(MPU_ADDR);
 //    Wire.write(0x3B);                            // starting with register 0x3B (ACCEL_XOUT_H)
@@ -247,7 +305,6 @@ void loop()
 //    GyY = Wire.read()<<8 | Wire.read();       // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
 //    GyZ = Wire.read()<<8 | Wire.read();       // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
 //    
-//    
 //    Serial.print(AcX); Serial.print(" , ");
 //    Serial.print(AcY); Serial.print(" , ");
 //    Serial.print(AcZ); Serial.print(" , ");
@@ -256,6 +313,7 @@ void loop()
 //    Serial.print(GyZ); Serial.print("\n");
 }
 
+//------------------------------------------------------------ Play Wav File ------------------------------------------------
 void PlayWav()
 {
   static bool ReadingFile=true;                       // True if reading file from SD. false if filling I2S buffer
@@ -277,6 +335,7 @@ void PlayWav()
                                                       // routine again and again until it returns true.
 }
 
+//------------------------------------------------------------ Read Wav File ------------------------------------------------
 uint16_t ReadFile(byte* Samples)
 {
     static uint32_t BytesReadSoFar=0;                   // Number of bytes read from file so far
@@ -299,7 +358,7 @@ uint16_t ReadFile(byte* Samples)
       BytesReadSoFar=0;                                 // Clear to no bytes read in so far                            
     }
 
-//    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!This is for Button controls!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! This is for Button controls !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //
 //    if (digitalRead(PUSH_BUTTON) && (Volume < 1) && (VolUp == 0))
 //    {
@@ -324,13 +383,13 @@ uint16_t ReadFile(byte* Samples)
 //    {
 //      VolDown = 0;
 //    }
-//    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!This is for Button controls!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! This is for Button controls !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     for (i = 0; i < BytesToRead; i += 2)                // We step two bytes at a time as we're using 16 bits per channel
     {
       SignedSample =* ((int16_t *)(Samples + i));       // Get the Byte address, convert to an int pointer, then get contents of that address as an int
       
-//    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! This next line is where we can edit the sound byte !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//---------------------------------------------- This next line is where we can edit the sound byte -------------------------
       SignedSample = SignedSample * Volume;             // Multiply by the volume - a value that will be between 0 and 1, where 1 would be full volume
       
       *((int16_t *)(Samples + i)) = SignedSample;       // Store back in the memory location we got the sample from
@@ -342,6 +401,7 @@ uint16_t ReadFile(byte* Samples)
     return BytesToRead;                                 // return the number of bytes read into buffer
 }
 
+//-------------------------------------------------------- Fill Audio Buffer ------------------------------------------------
 bool FillI2SBuffer(byte* Samples,uint16_t BytesInBuffer)
 {
     // Writes bytes to buffer, returns true if all bytes sent else false, keeps track itself of how many left
@@ -371,6 +431,7 @@ bool FillI2SBuffer(byte* Samples,uint16_t BytesInBuffer)
       return false;       // Still more data to send to I2S so return false to indicate this
 }
 
+//------------------------------------------------------- Initialize SD Card ------------------------------------------------
 void SDCardInit()
 {        
     pinMode(SD_CS, OUTPUT); 
@@ -382,6 +443,7 @@ void SDCardInit()
     }
 }
 
+//-------------------------------------------------------- Validate Wav Data ------------------------------------------------
 bool ValidWavData(WavHeader_Struct* Wav)
 {
   
@@ -434,6 +496,7 @@ bool ValidWavData(WavHeader_Struct* Wav)
 }
 
 
+//---------------------------------------------------------- Dump Wav Header ------------------------------------------------
 void DumpWAVHeader(WavHeader_Struct* Wav)
 {
   if(memcmp(Wav->RIFFSectionID,"RIFF",4)!=0)
@@ -472,6 +535,7 @@ void DumpWAVHeader(WavHeader_Struct* Wav)
   Serial.print("Data Size :");Serial.println(Wav->DataSize);
 }
 
+//--------------------------------------------------------------- Print Data ------------------------------------------------
 void PrintData(const char* Data,uint8_t NumBytes)
 {
     for(uint8_t i=0;i<NumBytes;i++)
@@ -479,27 +543,58 @@ void PrintData(const char* Data,uint8_t NumBytes)
       Serial.println();  
 }
 
+//--------------------------------------------------- Get Accelerometer Data ------------------------------------------------
 void GetGyro()
 {
-    Wire.beginTransmission(MPU_ADDR);
-    Wire.write(0x3B);                            // starting with register 0x3B (ACCEL_XOUT_H)
-    Wire.endTransmission(true);
-    Wire.beginTransmission(MPU_ADDR);
-    Wire.requestFrom(MPU_ADDR, 14, true);        // request a total of 14 registers
-    
-    AcX = Wire.read()<<8 | Wire.read();       // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-    AcY = Wire.read()<<8 | Wire.read();       // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-    AcZ = Wire.read()<<8 | Wire.read();       // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
-    Tmp = Wire.read()<<8 | Wire.read();       // 0x41 (TEMP_OUT_H) &  0x42 (TEMP_OUT_L)
-    GyX = Wire.read()<<8 | Wire.read();       // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-    GyY = Wire.read()<<8 | Wire.read();       // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-    GyZ = Wire.read()<<8 | Wire.read();       // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
-    
-    
-    Serial.print(AcX); Serial.print(" , ");
-    Serial.print(AcY); Serial.print(" , ");
-    Serial.print(AcZ); Serial.print(" , ");
-    Serial.print(GyX); Serial.print(" , ");
-    Serial.print(GyY); Serial.print(" , ");
-    Serial.print(GyZ); Serial.print("\n");
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! MPU-6050 Accelerometer Manual attempt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//    Wire.beginTransmission(MPU_ADDR);
+//    Wire.write(0x3B);                            // starting with register 0x3B (ACCEL_XOUT_H)
+//    Wire.endTransmission(true);
+//    Wire.beginTransmission(MPU_ADDR);
+//    Wire.requestFrom(MPU_ADDR, 14, true);        // request a total of 14 registers
+//    
+//    AcX = Wire.read()<<8 | Wire.read();       // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+//    AcY = Wire.read()<<8 | Wire.read();       // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+//    AcZ = Wire.read()<<8 | Wire.read();       // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+//    Tmp = Wire.read()<<8 | Wire.read();       // 0x41 (TEMP_OUT_H) &  0x42 (TEMP_OUT_L)
+//    GyX = Wire.read()<<8 | Wire.read();       // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+//    GyY = Wire.read()<<8 | Wire.read();       // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+//    GyZ = Wire.read()<<8 | Wire.read();       // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+//    
+//    
+//    Serial.print(AcX); Serial.print(" , ");
+//    Serial.print(AcY); Serial.print(" , ");
+//    Serial.print(AcZ); Serial.print(" , ");
+//    Serial.print(GyX); Serial.print(" , ");
+//    Serial.print(GyY); Serial.print(" , ");
+//    Serial.print(GyZ); Serial.print("\n");
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! MPU-6050 Accelerometer Manual attempt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  /*  Get new sensor events with the readings */
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+  /*  Print out the values  */
+  Serial.print("Acceleration(m/s^2) X: ");
+  Serial.print(a.acceleration.x);
+  Serial.print("Y: ");
+  Serial.print(a.acceleration.y);
+  Serial.print("Z: ");
+  Serial.print(a.acceleration.z);
+  Serial.print("     ");
+
+  Serial.print("Rotation(rad/s) X: ");
+  Serial.print(g.gyro.x);
+  Serial.print("Y: ");
+  Serial.print(g.gyro.y);
+  Serial.print("Z: ");
+  Serial.print(g.gyro.z);
+  Serial.print("     ");
+
+  Serial.print("Temperature(C): ");
+  Serial.print(temp.temperature);
+  Serial.print("     ");
+
+  Serial.println("");
+  delay(10);
 }
